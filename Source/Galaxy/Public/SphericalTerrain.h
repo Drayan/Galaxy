@@ -29,10 +29,16 @@ public:
 	virtual bool ShouldTickIfViewportsOnly() const override { return true; }
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Terrain")
+	UMaterialInterface* TerrainMaterial;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Terrain")
 	double Radius = 500.0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Terrain")
 	int32 MeshResolution = 32;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Terrain")
+	int32 HeightMapResolution = 512;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Terrain")
 	int32 MaxLOD = 6;

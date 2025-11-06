@@ -8,11 +8,11 @@ public class Galaxy : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "GalaxyShaders" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "GeometryScriptingCore", "GeometryCore", "GeometryFramework" });
 
-		if(Target.bBuildEditor)
+        if (Target.bBuildEditor)
 		{
 			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "GeometryScriptingEditor" });
         }
