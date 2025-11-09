@@ -15,7 +15,7 @@ public:
 		SHADER_PARAMETER(float, Amplitude)
 		SHADER_PARAMETER(float, Lacunarity)
 		SHADER_PARAMETER(float, Persistence)
-		SHADER_PARAMETER(int32, Octaves)
+		SHADER_PARAMETER(int, Octaves)
 		SHADER_PARAMETER(float, Radius)
 		SHADER_PARAMETER(FVector2f, PatchMin)
 		SHADER_PARAMETER(FVector2f, PatchMax)
@@ -29,6 +29,6 @@ public:
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 	{
-		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
 	}
 };

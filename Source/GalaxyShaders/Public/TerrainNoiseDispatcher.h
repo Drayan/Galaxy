@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "Engine/TextureRenderTarget2D.h"
-#include "TerrainNoiseCS.h"
 
 struct FTerrainNoiseParams
 {
@@ -28,5 +27,5 @@ struct FTerrainNoiseParams
 class FTerrainNoiseDispatcher
 {
 public:
-	static void DispatchToRenderTarget(UTextureRenderTarget2D* RT, const FTerrainNoiseParams& P);
+	static GALAXYSHADERS_API void DispatchToRenderTarget(UTextureRenderTarget2D* RT, const FTerrainNoiseParams& P);
 };

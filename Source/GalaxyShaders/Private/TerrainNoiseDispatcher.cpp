@@ -3,6 +3,7 @@
 #include "RenderTargetPool.h"
 #include "RHICommandList.h"
 #include "RenderGraphUtils.h"
+#include "TerrainNoiseCS.h"
 
 void FTerrainNoiseDispatcher::DispatchToRenderTarget(UTextureRenderTarget2D* RT, const FTerrainNoiseParams& P)
 {

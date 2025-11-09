@@ -1,27 +1,23 @@
-#include "FastNoiseLite.ush"
+﻿#include "FastNoiseLite.ush"
 #include "/Engine/Public/Platform.ush"
 
-RWTexture2D<float> OutHeight;
-cbuffer Params
-{
-    float Frequency;
-    float Amplitude;
-    float Lacunarity;
-    float Persistence;
-    int Octaves;
+float Frequency;
+float Amplitude;
+float Lacunarity;
+float Persistence;
+int Octaves;
     
-    float Radius;
-    float2 PatchMin;
-    float2 PatchMax;
-    float3 PlanetCenter;
-    float3 FaceX;
-    float3 FaceY;
-    float3 FaceZ;
+float Radius;
+float2 PatchMin;
+float2 PatchMax;
+float3 PlanetCenter;
+float3 FaceX;
+float3 FaceY;
+float3 FaceZ;
     
-    uint Seed;
-};
+uint Seed;
 
-static fnl_state noise = fnlCreateState(Seed);
+RWTexture2D<float> OutHeight;
 
 [numthreads(8, 8, 1)]
 void MainCS(uint3 DTid : SV_DispatchThreadID)
@@ -41,11 +37,12 @@ void MainCS(uint3 DTid : SV_DispatchThreadID)
     float3 pCube = FaceX * uvPatch.x + FaceY * uvPatch.y + FaceZ;
     
     // 3. Project onto sphere
-    float3 dir = normalize(pCube - PlanetCenter);
+    float3 dir = normalize(pCube);
     float3 pWorld = PlanetCenter + dir * Radius;
     
     // 4. Generate fractal noise
-    noise.noise_type = FNL_NOISE_OPENSIMPLEX2;
+    fnl_state noise = fnlCreateState(Seed);
+    noise.noise_type = FNL_NOISE_PERLIN;
     float sum = 0, a = 1, f = Frequency;
     //[unroll]
     for (int i = 0; i < Octaves; ++i)
@@ -54,6 +51,7 @@ void MainCS(uint3 DTid : SV_DispatchThreadID)
         f *= Lacunarity;
         a *= Persistence;
     }
+   
 
     OutHeight[DTid.xy] = sum * Amplitude;
 }
