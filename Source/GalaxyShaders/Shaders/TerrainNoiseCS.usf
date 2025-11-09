@@ -38,12 +38,12 @@ void MainCS(uint3 DTid : SV_DispatchThreadID)
     
     // 3. Project onto sphere
     float3 dir = normalize(pCube);
-    float3 pWorld = PlanetCenter + dir * Radius;
+    float3 pWorld = dir * Radius;
     
     // 4. Generate fractal noise
     fnl_state noise = fnlCreateState(Seed);
-    noise.noise_type = FNL_NOISE_PERLIN;
-    float sum = 0, a = 1, f = Frequency;
+    noise.noise_type = FNL_NOISE_OPENSIMPLEX2S;
+    float sum = 0.0f, a = 1.0f, f = Frequency;
     //[unroll]
     for (int i = 0; i < Octaves; ++i)
     {
@@ -52,6 +52,5 @@ void MainCS(uint3 DTid : SV_DispatchThreadID)
         a *= Persistence;
     }
    
-
     OutHeight[DTid.xy] = sum * Amplitude;
 }
