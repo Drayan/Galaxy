@@ -21,7 +21,6 @@ struct FTerrainNoiseParams
 	FVector3f FaceY = FVector3f::RightVector;
 	FVector3f FaceZ = FVector3f::UpVector;
 
-	int32 FaceWindingSign = 1;
 	uint32 Seed = 1337;
 };
 

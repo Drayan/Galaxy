@@ -48,7 +48,6 @@ void FTerrainNoiseDispatcher::DispatchToRenderTarget(
 			Params->FaceX = P.FaceX;
 			Params->FaceY = P.FaceY;
 			Params->FaceZ = P.FaceZ;
-			Params->FaceWindingSign = P.FaceWindingSign;
 			Params->Seed = P.Seed;
 			Params->OutHeight = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(RDGOutTex));
 			Params->OutNormal = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(RDGOutNormal));
