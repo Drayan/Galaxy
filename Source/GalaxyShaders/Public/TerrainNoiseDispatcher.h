@@ -21,11 +21,16 @@ struct FTerrainNoiseParams
 	FVector3f FaceY = FVector3f::RightVector;
 	FVector3f FaceZ = FVector3f::UpVector;
 
+	int32 FaceWindingSign = 1;
 	uint32 Seed = 1337;
 };
 
 class FTerrainNoiseDispatcher
 {
 public:
-	static GALAXYSHADERS_API void DispatchToRenderTarget(UTextureRenderTarget2D* RT, const FTerrainNoiseParams& P);
+	static GALAXYSHADERS_API void DispatchToRenderTarget(
+		UTextureRenderTarget2D* HeightRT,
+		UTextureRenderTarget2D* ColorRT,
+		UTextureRenderTarget2D* NormalRT,
+		const FTerrainNoiseParams& P);
 };

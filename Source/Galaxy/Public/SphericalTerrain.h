@@ -43,6 +43,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Terrain")
 	int32 MaxLOD = 6;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generation")
+	float Frequency = 0.35f;
+
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif

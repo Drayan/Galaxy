@@ -84,6 +84,8 @@ void ASphericalTerrain::SetupFaces()
 			face->ParentTerrain = this;
 			face->GridSize = MeshResolution;
 			face->FaceDirection = static_cast<ETerrainFaceDirection::Type>(i);
+			face->Frequency = Frequency;
+			face->LODLevel = 0;
 			switch (face->FaceDirection)
 			{
 				case ETerrainFaceDirection::Up:

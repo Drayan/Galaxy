@@ -18,39 +18,158 @@ float3 FaceZ;
 uint Seed;
 
 RWTexture2D<float> OutHeight;
+RWTexture2D<float3> OutNormal;
+RWTexture2D<float4> OutColor;
+
+fnl_state CreateNoiseState()
+{
+    fnl_state state = fnlCreateState(Seed);
+    state.noise_type = FNL_NOISE_OPENSIMPLEX2;
+    return state;
+}
+
+int GetExtraOctaves(out float fractionalOctave)
+{
+    uint2 dim;
+    OutHeight.GetDimensions(dim.x, dim.y);
+    
+    float2 patchSize = PatchMax - PatchMin;
+    float avgPatchSize = (patchSize.x + patchSize.y) * 0.5f;
+    float avgTexSize = (float(dim.x) + float(dim.y)) * 0.5f;
+    float worldPerPixel = avgPatchSize / avgTexSize;
+    float referenceWorldPerPixel = 2.0f / 512.0f;
+    float densityRatio = referenceWorldPerPixel / worldPerPixel;
+    float extraOctavesFloat = log2(max(densityRatio, 1.0f));
+    
+    fractionalOctave = frac(extraOctavesFloat);
+    return (int) floor(extraOctavesFloat);
+}
+
+float SampleHeight(fnl_state noise, float3 worldPos, int extraOctaves, float fractionalOctave)
+{
+    float sum = 0.0f;
+    float currentAmplitude = 1.0f;
+    float currentFrequency = Frequency;
+    float3 noisePos = worldPos;
+    
+    int totalOctaves = Octaves + extraOctaves + 1;
+    
+    for (int i = 0; i < totalOctaves; ++i)
+    {
+        float noise3D = fnlGetNoise3D(noise,
+            noisePos.x * currentFrequency,
+            noisePos.y * currentFrequency,
+            noisePos.z * currentFrequency);
+        
+        float octaveWeight = 1.0f;
+        if (i >= Octaves + extraOctaves)
+        {
+            octaveWeight = fractionalOctave;
+        }
+        
+        sum += currentAmplitude * noise3D * octaveWeight;
+        currentFrequency *= Lacunarity;
+        currentAmplitude *= Persistence;
+    }
+    
+    return sum * Amplitude;
+}
+
+float3 ComputeWorldPosition(float2 uvFace)
+{
+    float2 uvPatch = lerp(PatchMin, PatchMax, uvFace);
+    float3 pCube = FaceX * uvPatch.x * Radius + FaceY * uvPatch.y * Radius + FaceZ * Radius;
+    float3 dir = normalize(pCube);
+    return dir * Radius;
+}
+
+float3 EncodeNormal(float3 normal)
+{
+    return normal * 0.5f + 0.5f;
+}
+
+float3 ComputeNormalFromHeight(fnl_state noise, float2 uv, int extraOctaves, float fractionalOctave)
+{
+    float3 centerPos = ComputeWorldPosition(uv);
+    float3 centerDir = normalize(centerPos);
+    
+    // Calculate epsilon for sampling neighbors in world space
+    float eps = Radius * 0.001f;
+    
+    // Sample heights at 6 cardinal directions in world space
+    float3 posXp = normalize(centerPos + float3(eps, 0, 0)) * Radius;
+    float3 posXn = normalize(centerPos - float3(eps, 0, 0)) * Radius;
+    float3 posYp = normalize(centerPos + float3(0, eps, 0)) * Radius;
+    float3 posYn = normalize(centerPos - float3(0, eps, 0)) * Radius;
+    float3 posZp = normalize(centerPos + float3(0, 0, eps)) * Radius;
+    float3 posZn = normalize(centerPos - float3(0, 0, eps)) * Radius;
+    
+    // Sample heights - using all octaves including LOD-specific ones
+    float hXp = SampleHeight(noise, posXp, extraOctaves, fractionalOctave);
+    float hXn = SampleHeight(noise, posXn, extraOctaves, fractionalOctave);
+    float hYp = SampleHeight(noise, posYp, extraOctaves, fractionalOctave);
+    float hYn = SampleHeight(noise, posYn, extraOctaves, fractionalOctave);
+    float hZp = SampleHeight(noise, posZp, extraOctaves, fractionalOctave);
+    float hZn = SampleHeight(noise, posZn, extraOctaves, fractionalOctave);
+    
+    // Compute the height gradient in world space
+    float3 gradient = float3(
+        (hXp - hXn) / (2.0f * eps),
+        (hYp - hYn) / (2.0f * eps),
+        (hZp - hZn) / (2.0f * eps)
+    );
+    
+    // The normal is the sphere normal minus the height gradient
+    float3 normal = normalize(centerDir - gradient);
+    
+    // Ensure outward orientation
+    if (dot(normal, centerDir) < 0.0f)
+    {
+        normal = -normal;
+    }
+    
+    // Fallback for numerical issues
+    if (!all(isfinite(normal)))
+    {
+        normal = centerDir;
+    }
+    
+    return normal;
+}
 
 [numthreads(8, 8, 1)]
 void MainCS(uint3 DTid : SV_DispatchThreadID)
 {
     uint2 dim;
     OutHeight.GetDimensions(dim.x, dim.y);
-    if(DTid.x >= dim.x || DTid.y >= dim.y)
-    {
+    if (DTid.x >= dim.x || DTid.y >= dim.y)
         return;
-    }
     
-    // 1. Map 2D texture coordinates to a point on the cube face
-    float2 uv = (float2) DTid.xy / (float2) (dim - 1);
-    float2 uvPatch = lerp(PatchMin, PatchMax, uv);
+    fnl_state noise = CreateNoiseState();
     
-    // 2. Convert to 3D position on the cube face
-    float3 pCube = FaceX * uvPatch.x + FaceY * uvPatch.y + FaceZ;
+    float fractionalOctave;
+    int extraOctaves = GetExtraOctaves(fractionalOctave);
     
-    // 3. Project onto sphere
-    float3 dir = normalize(pCube);
-    float3 pWorld = dir * Radius;
+    float2 denom = float2(max(dim.x - 1, 1), max(dim.y - 1, 1));
+    float2 uv = float2(DTid.xy) / denom;
     
-    // 4. Generate fractal noise
-    fnl_state noise = fnlCreateState(Seed);
-    noise.noise_type = FNL_NOISE_OPENSIMPLEX2S;
-    float sum = 0.0f, a = 1.0f, f = Frequency;
-    //[unroll]
-    for (int i = 0; i < Octaves; ++i)
-    {
-        sum += a * fnlGetNoise3D(noise, pWorld.x * f, pWorld.y * f, pWorld.z * f);
-        f *= Lacunarity;
-        a *= Persistence;
-    }
-   
-    OutHeight[DTid.xy] = sum * Amplitude;
+    float3 worldPos = ComputeWorldPosition(uv);
+    float heightValue = SampleHeight(noise, worldPos, extraOctaves, fractionalOctave);
+    OutHeight[DTid.xy] = heightValue;
+    
+    float3 normal = ComputeNormalFromHeight(noise, uv, extraOctaves, fractionalOctave);
+    OutNormal[DTid.xy] = EncodeNormal(normal);
+    
+    float heightRange = max(abs(Amplitude) * 2.0f, 0.001f);
+    float heightNormalized = saturate((heightValue + abs(Amplitude)) / heightRange);
+    
+    float3 shoreColor = float3(0.08f, 0.12f, 0.20f);
+    float3 grassColor = float3(0.10f, 0.35f, 0.15f);
+    float3 rockColor = float3(0.50f, 0.47f, 0.45f);
+    float3 snowColor = float3(0.90f, 0.92f, 0.95f);
+    
+    float3 terrainColor = lerp(shoreColor, grassColor, smoothstep(0.10f, 0.40f, heightNormalized));
+    terrainColor = lerp(terrainColor, rockColor, smoothstep(0.55f, 0.75f, heightNormalized));
+    terrainColor = lerp(terrainColor, snowColor, smoothstep(0.80f, 1.00f, heightNormalized));
+    OutColor[DTid.xy] = float4(terrainColor, 1.0f);
 }

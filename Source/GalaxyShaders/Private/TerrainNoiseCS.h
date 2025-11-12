@@ -23,8 +23,11 @@ public:
 		SHADER_PARAMETER(FVector3f, FaceX)
 		SHADER_PARAMETER(FVector3f, FaceY)
 		SHADER_PARAMETER(FVector3f, FaceZ)
+		SHADER_PARAMETER(int32, FaceWindingSign)
 		SHADER_PARAMETER(uint32, Seed)
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float>, OutHeight)
+		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<FVector3f>, OutNormal)
+		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<FColor>, OutColor)
 	END_SHADER_PARAMETER_STRUCT();
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)

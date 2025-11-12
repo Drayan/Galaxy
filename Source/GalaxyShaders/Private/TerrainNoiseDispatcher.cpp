@@ -5,20 +5,34 @@
 #include "RenderGraphUtils.h"
 #include "TerrainNoiseCS.h"
 
-void FTerrainNoiseDispatcher::DispatchToRenderTarget(UTextureRenderTarget2D* RT, const FTerrainNoiseParams& P)
+void FTerrainNoiseDispatcher::DispatchToRenderTarget(
+	UTextureRenderTarget2D* HeightRT, 
+	UTextureRenderTarget2D* ColorRT, 
+	UTextureRenderTarget2D* NormalRT,
+	const FTerrainNoiseParams& P)
 {
-	if (!RT) return;
-	FTextureRenderTargetResource* RTRes = RT->GameThread_GetRenderTargetResource();
-	const FIntPoint Size = RTRes->GetSizeXY();
+	if (!HeightRT || !ColorRT || !NormalRT) return;
+	FTextureRenderTargetResource* HeightRTRes = HeightRT->GameThread_GetRenderTargetResource();
+	FTextureRenderTargetResource* ColorRTRes = ColorRT->GameThread_GetRenderTargetResource();
+	FTextureRenderTargetResource* NormalRTRes = NormalRT->GameThread_GetRenderTargetResource();
+	const FIntPoint HeightMapSize = HeightRTRes->GetSizeXY();
 
 	ENQUEUE_RENDER_COMMAND(TerrainNoiseDispatch)(
-		[RTRes, Size, P](FRHICommandListImmediate& RHICmdList)
+		[HeightRTRes, HeightMapSize, ColorRTRes, NormalRTRes, P](FRHICommandListImmediate& RHICmdList)
 		{
 			FRDGBuilder GraphBuilder(RHICmdList, RDG_EVENT_NAME("SphericalTerrain_Noise"));
 
 			// Save the render target to the graph as external texture
 			FRDGTextureRef RDGOutTex = GraphBuilder.RegisterExternalTexture(
-				CreateRenderTarget(RTRes->GetRenderTargetTexture(), TEXT("TerrainHeigthRT"))
+				CreateRenderTarget(HeightRTRes->GetRenderTargetTexture(), TEXT("TerrainHeigthRT"))
+			);
+
+			FRDGTextureRef RDGOutColor = GraphBuilder.RegisterExternalTexture(
+				CreateRenderTarget(ColorRTRes->GetRenderTargetTexture(), TEXT("TerrainColorRT"))
+			);
+
+			FRDGTextureRef RDGOutNormal = GraphBuilder.RegisterExternalTexture(
+				CreateRenderTarget(NormalRTRes->GetRenderTargetTexture(), TEXT("TerrainNormalRT"))
 			);
 
 			FTerrainNoiseCS::FParameters* Params = GraphBuilder.AllocParameters<FTerrainNoiseCS::FParameters>();
@@ -34,14 +48,17 @@ void FTerrainNoiseDispatcher::DispatchToRenderTarget(UTextureRenderTarget2D* RT,
 			Params->FaceX = P.FaceX;
 			Params->FaceY = P.FaceY;
 			Params->FaceZ = P.FaceZ;
+			Params->FaceWindingSign = P.FaceWindingSign;
 			Params->Seed = P.Seed;
 			Params->OutHeight = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(RDGOutTex));
+			Params->OutNormal = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(RDGOutNormal));
+			Params->OutColor = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(RDGOutColor));
 
 			TShaderMapRef<FTerrainNoiseCS> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
 			const FIntVector GroupCount(
-				FMath::DivideAndRoundUp(Size.X, 8),
-				FMath::DivideAndRoundUp(Size.Y, 8),
+				FMath::DivideAndRoundUp(HeightMapSize.X, 8),
+				FMath::DivideAndRoundUp(HeightMapSize.Y, 8),
 				1
 			);
 
