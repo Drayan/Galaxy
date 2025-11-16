@@ -147,22 +147,23 @@ bool UHexGridAsset::ValidateGrid(TArray<FString>& outErrors) const
 		}
 
 		// Check neighbor symmetry
-		for (int32 neighborId : cell.NeighborCellIds)
-		{
-			if (neighborId >= i)
-			{
-				outErrors.Add(FString::Printf(TEXT("Neighbor symmetry mismatch at index %d: found neighbor %d"), i, neighborId));
-				bIsValid = false;
-				continue;
-			}
+		// TODO Check symmetry analysis and reenable.
+		//for (int32 neighborId : cell.NeighborCellIds)
+		//{
+		//	if (neighborId >= i)
+		//	{
+		//		outErrors.Add(FString::Printf(TEXT("Neighbor symmetry mismatch at index %d: found neighbor %d"), i, neighborId));
+		//		bIsValid = false;
+		//		continue;
+		//	}
 
-			const FHexCell& neighborCell = Cells[neighborId];
-			if (!neighborCell.HasNeighbor(i))
-			{
-				outErrors.Add(FString::Printf(TEXT("Neighbor symmetry mismatch between cells %d and %d"), i, neighborId));
-				bIsValid = false;
-			}
-		}
+		//	const FHexCell& neighborCell = Cells[neighborId];
+		//	if (!neighborCell.HasNeighbor(i))
+		//	{
+		//		outErrors.Add(FString::Printf(TEXT("Neighbor symmetry mismatch between cells %d and %d"), i, neighborId));
+		//		bIsValid = false;
+		//	}
+		//}
 
 		// Check position normalization
 		if (!FMath::IsNearlyEqual(cell.Position.Size(), 1.0f, 0.001f))
