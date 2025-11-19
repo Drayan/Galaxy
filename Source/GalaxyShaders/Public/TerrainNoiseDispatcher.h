@@ -1,7 +1,11 @@
+// (c) 2025 Michaël Desmedt. Licensed under the PolyForm Noncommercial License 1.0.0. 
+// Noncommercial use only. Commercial use requires written permission. 
+// See https://polyformproject.org/licenses/noncommercial/1.0.0/
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Engine/Texture2DArray.h"
 
 struct FTerrainNoiseParams
 {
@@ -31,5 +35,12 @@ public:
 		UTextureRenderTarget2D* HeightRT,
 		UTextureRenderTarget2D* ColorRT,
 		UTextureRenderTarget2D* NormalRT,
+		const FTerrainNoiseParams& P);
+
+	static GALAXYSHADERS_API void DispatchToTextureArraySlice(
+		UTexture2DArray* HeightArray,
+		UTexture2DArray* ColorArray,
+		UTexture2DArray* NormalArray,
+		int32 SliceIndex,
 		const FTerrainNoiseParams& P);
 };

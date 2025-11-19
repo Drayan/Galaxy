@@ -530,3 +530,71 @@ void UHexGridGenerator::FindEdgeTriangles(const FTriangleMesh& mesh, int32 vA, i
 		}
 	}
 }
+
+bool UHexGridGenerator::PopulateHexGridAsset(UHexGridAsset* hexGrid, int32 level, TArray<FString>& OutErrors)
+{
+	OutErrors.Empty();
+
+	if (!hexGrid)
+	{
+		OutErrors.Add(TEXT("Invalid grid asset, provided grid is null."));
+		return false;
+	}
+
+	if (level < 0 || level > 10)
+	{
+		OutErrors.Add(FString::Printf(TEXT("Invalid level %d. Level must be between 0 and 10."), level));
+		return false;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("HexGridGenerator: Starting population for existing grid asset at level %d."), level);
+
+	// Set grid level
+	hexGrid->GridLevel = level;
+	
+	// Step 1 : Create base icosahedron
+	FTriangleMesh mesh;
+	CreateIcosahedron(mesh);
+	UE_LOG(LogTemp, Log, TEXT("HexGridGenerator: Created base icosahedron with %d vertices and %d triangles."), mesh.Vertices.Num(), mesh.GetTriangleCount());
+
+	// Step 2 : Subdivide mesh
+	SubdivideMesh(mesh, level);
+	UE_LOG(LogTemp, Log, TEXT("HexGridGenerator: Subdivided mesh to level %d with %d vertices and %d triangles."), level, mesh.Vertices.Num(), mesh.GetTriangleCount());
+
+	// Step 3 : Build adjacency data
+	BuildAdjacencyData(mesh);
+	UE_LOG(LogTemp, Log, TEXT("HexGridGenerator: Built adjacency data."));
+
+	// Step 4 : Generate hex grid from triangle mesh
+	ConvertToHexDual(mesh, hexGrid);
+	UE_LOG(LogTemp, Log, TEXT("HexGridGenerator: Converted to hex dual grid with %d cells."), hexGrid->Cells.Num());
+
+	// Step 5 : Build cell neighbors
+	BuildCellNeighbors(hexGrid);
+	UE_LOG(LogTemp, Log, TEXT("HexGridGenerator: Built cell neighbors."));
+
+	// Step 6 : Order cell vertices
+	OrderCellVertices(hexGrid);
+	UE_LOG(LogTemp, Log, TEXT("HexGridGenerator: Ordered cell vertices."));
+
+	// Step 7 : Assign icosahedron faces
+	AssignIcosahedronFaces(hexGrid);
+	UE_LOG(LogTemp, Log, TEXT("HexGridGenerator: Assigned icosahedron faces."));
+
+	// Calculate statistics
+	hexGrid->CalculateStatistics();
+
+	// Validate
+	TArray<FString> validationErrors;
+	bool bValid = hexGrid->ValidateGrid(validationErrors);
+
+	if (!bValid)
+	{
+		OutErrors.Append(validationErrors);
+		UE_LOG(LogTemp, Error, TEXT("HexGridGenerator: Validation failed with %d errors."), validationErrors.Num());
+		return false;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("HexGridGenerator: Validation succeeded."));
+	return true;
+}

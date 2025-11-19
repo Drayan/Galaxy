@@ -16,10 +16,18 @@ float3 FaceY;
 float3 FaceZ;
     
 uint Seed;
+uint UseTextureArray;
+uint SliceIndex;
 
+// RenderTarget outputs (deprecated)
 RWTexture2D<float> OutHeight;
 RWTexture2D<float3> OutNormal;
 RWTexture2D<float4> OutColor;
+
+// TextureArray outputs (preferred)
+RWTexture2DArray<float> OutHeightArray;
+RWTexture2DArray<float3> OutNormalArray;
+RWTexture2DArray<float4> OutColorArray;
 
 fnl_state CreateNoiseState()
 {
@@ -28,11 +36,8 @@ fnl_state CreateNoiseState()
     return state;
 }
 
-int GetExtraOctaves(out float fractionalOctave)
+int GetExtraOctaves(out float fractionalOctave, uint2 dim)
 {
-    uint2 dim;
-    OutHeight.GetDimensions(dim.x, dim.y);
-    
     float2 patchSize = PatchMax - PatchMin;
     float avgPatchSize = (patchSize.x + patchSize.y) * 0.5f;
     float avgTexSize = (float(dim.x) + float(dim.y)) * 0.5f;
@@ -141,24 +146,31 @@ float3 ComputeNormalFromHeight(fnl_state noise, float2 uv, int extraOctaves, flo
 void MainCS(uint3 DTid : SV_DispatchThreadID)
 {
     uint2 dim;
-    OutHeight.GetDimensions(dim.x, dim.y);
+
+    if (UseTextureArray)
+    {
+        uint elements;
+        OutHeightArray.GetDimensions(dim.x, dim.y, elements);
+    }
+    else
+    {
+        OutHeight.GetDimensions(dim.x, dim.y);
+    }
+
     if (DTid.x >= dim.x || DTid.y >= dim.y)
         return;
     
     fnl_state noise = CreateNoiseState();
     
     float fractionalOctave;
-    int extraOctaves = GetExtraOctaves(fractionalOctave);
+    int extraOctaves = GetExtraOctaves(fractionalOctave, dim);
     
     float2 denom = float2(max(dim.x - 1, 1), max(dim.y - 1, 1));
     float2 uv = float2(DTid.xy) / denom;
     
     float3 worldPos = ComputeWorldPosition(uv);
     float heightValue = SampleHeight(noise, worldPos, extraOctaves, fractionalOctave);
-    OutHeight[DTid.xy] = heightValue;
-    
     float3 normal = ComputeNormalFromHeight(noise, uv, extraOctaves, fractionalOctave);
-    OutNormal[DTid.xy] = EncodeNormal(normal);
     
     float heightRange = max(abs(Amplitude) * 2.0f, 0.001f);
     float heightNormalized = saturate((heightValue + abs(Amplitude)) / heightRange);
@@ -171,5 +183,18 @@ void MainCS(uint3 DTid : SV_DispatchThreadID)
     float3 terrainColor = lerp(shoreColor, grassColor, smoothstep(0.10f, 0.40f, heightNormalized));
     terrainColor = lerp(terrainColor, rockColor, smoothstep(0.55f, 0.75f, heightNormalized));
     terrainColor = lerp(terrainColor, snowColor, smoothstep(0.80f, 1.00f, heightNormalized));
-    OutColor[DTid.xy] = float4(terrainColor, 1.0f);
+
+    if (UseTextureArray)
+    {
+        uint3 writeCoord = uint3(DTid.xy, SliceIndex);
+        OutHeightArray[writeCoord] = heightValue;
+        OutNormalArray[writeCoord] = EncodeNormal(normal);
+        OutColorArray[writeCoord] = float4(terrainColor, 1.0f);
+    }
+    else
+    {
+        OutHeight[DTid.xy] = heightValue;
+        OutNormal[DTid.xy] = normal;
+        OutColor[DTid.xy] = float4(terrainColor, 1.0f);
+    }
 }

@@ -14,7 +14,7 @@ public class Galaxy : ModuleRules
 
         if (Target.bBuildEditor)
 		{
-			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "GeometryScriptingEditor" });
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "GeometryScriptingEditor", "Slate", "SlateCore" });
         }
 
         // Uncomment if you are using Slate UI

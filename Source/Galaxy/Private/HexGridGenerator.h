@@ -66,6 +66,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Hex Grid Generation")
 	static UHexGridAsset* CreateHexGridAsset(int32 level, const FString& assetName, const FString& assetPath, TArray<FString>& OutErrors);
 
+	UFUNCTION(BlueprintCallable, Category = "Hex Grid Generation")
+	static bool PopulateHexGridAsset(UHexGridAsset* hexGrid, int32 level, TArray<FString>& OutErrors);
+
 private:
 	// === Generation Pipeline ===
 

@@ -1,4 +1,6 @@
-// (c) 2025 Michaël Desmedt. Licensed under the PolyForm Noncommercial License 1.0.0. Noncommercial use only. Commercial use requires written permission. See https://polyformproject.org/licenses/noncommercial/1.0.0/
+// (c) 2025 Michaël Desmedt. Licensed under the PolyForm Noncommercial License 1.0.0. 
+// Noncommercial use only. Commercial use requires written permission. 
+// See https://polyformproject.org/licenses/noncommercial/1.0.0/
 #pragma once
 
 #include "GlobalShader.h"
@@ -24,13 +26,23 @@ public:
 		SHADER_PARAMETER(FVector3f, FaceY)
 		SHADER_PARAMETER(FVector3f, FaceZ)
 		SHADER_PARAMETER(uint32, Seed)
+
+		SHADER_PARAMETER(uint32, SliceIndex)
+		SHADER_PARAMETER(uint32, UseTextureArray) // 0 = RenderTarget, 1 = TextureArray
+
+		// RenderTargets
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float>, OutHeight)
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<FVector3f>, OutNormal)
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<FColor>, OutColor)
+
+		// TextureArrays
+		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2DArray<float>, OutHeightArray)
+		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2DArray<FVector3f>, OutNormalArray)
+		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2DArray<FColor>, OutColorArray)
 	END_SHADER_PARAMETER_STRUCT();
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 	{
-		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 	}
 };
